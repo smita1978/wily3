@@ -1,5 +1,8 @@
 import React from 'react';
-import { Text, View , TouchableOpacity, StyleSheet , TextInput , Image, Alert , KeyboardAvoidingView , ToastAndroid} from 'react-native';
+import { Text,
+   View , TouchableOpacity, StyleSheet ,
+    TextInput , Image, Alert ,
+     KeyboardAvoidingView , ToastAndroid} from 'react-native';
 import { BarCodeScanner } from 'expo-barcode-scanner';
 import * as Permissions from 'expo-permissions';
 import firebase from 'firebase';
@@ -13,7 +16,8 @@ export default class TransactionScreen extends React.Component {
       scanned:false,
       scanBookID:'',
       buttonState:'normal',
-      scanStudentID:''
+      scanStudentID:'',
+      transactionstage:''
     }
   }
 
@@ -47,30 +51,12 @@ export default class TransactionScreen extends React.Component {
 
   }
 
-  handleTransaction=async()=>{
-    var transactionStage;
-    db.collection("books").doc(this.state.scanBookID).get().then((doc)=>{
-      console.log(doc.data)
-      var book=doc.data
-      if(book.bookAvailibility ){
-        this.initiateBookIssue();
-        transactionStage="book issued";
-        //Alert.alert(transactionStage)
-        ToastAndroid.show(transactionStage,ToastAndroid.SHORT)
-      }else {
-        this.initiateBookReturn()
-        transactionStage="book returned";
-        //Alert.alert(transactionStage)
-        ToastAndroid.show(transactionStage,ToastAndroid.SHORT)
-      }
-    })
-  }
 
   initiateBookIssue=async()=>{
     db.collection("transaction").add({
       'studentID':this.state.scanStudentID,
       'bookID':this.state.scanBookId,
-      'date':firebase.firestore.Timestamp.now().toDate(),
+      'date': firebase.firestore.Timestamp.now().toDate(),
       'transactionType':"issue"
     })
     db.collection("books").doc(this.state.scanBookId).update({
@@ -106,31 +92,61 @@ export default class TransactionScreen extends React.Component {
     })
   }
 
+  handleTransaction=async()=>{
+    var transactionStage;
+    db.collection("books").doc(this.state.scanBookID).get()
+    .then((doc)=>{
+      console.log(doc.data)
+      var book=doc.data();
+      if(book.bookAvailibility ){
+        this.initiateBookIssue();
+        transactionStage="book issued";
+        //Alert.alert(transactionStage)
+        ToastAndroid.show(transactionStage,ToastAndroid.SHORT);
+      }else {
+        this.initiateBookReturn();
+        transactionStage="book returned";
+        //Alert.alert(transactionStage)
+        ToastAndroid.show(transactionStage,ToastAndroid.SHORT);
+      }
+    })
+    this.setState({
+      transactionstage:transactionStage,
+    })
+  }
+
+
     render() {
-      const hasCameraPermissions=this.state.hasCameraPermissions;
-      const scanned=this.state.scanned;
-      const buttonState=this.state.buttonState;
-      if(buttonState==='clicked' && hasCameraPermissions){
+ const hasCameraPermissions=this.state.hasCameraPermissions;
+ const scanned=this.state.scanned;
+ const buttonState=this.state.buttonState;
+      if(buttonState!=='normal' && hasCameraPermissions){
         return(
-          <BarCodeScanner onBarCodeScanned={scanned?undefined:this.handleBarcodeScanned}
+          <BarCodeScanner 
+          onBarCodeScanned={scanned?undefined:this.handleBarcodeScanned}
           style={StyleSheet.absoluteFillObject}/>
-        )
+        );
       }else if(buttonState==='normal'){
         return(
           <KeyboardAvoidingView
-          behaviour="padding" style={styles.container} enabled/>,
-          <View style={styles.container}>
+          behaviour="padding" style={styles.container} enabled>
+         
             <View>
-              <Image source={require('../assets/book.png')} style={{width:200,height:200}}/>
+              <Image source={require('../assets/book.png')}
+               style={{width:200,height:200}}/>
+             <view>
+              <Text style={{textAlign: 'center', fontSize: 30}}>Wily</Text>
+              </view>
             </View>
             
             <View style={styles.inputView}>
               <TextInput style={styles.inputBox}
               placeholder="Book ID" 
               onChangeText={text=>this.setState({scanBookID:text})}
-              value= {this.state.scanBookID}></TextInput>
+              value= {this.state.scanBookID}/>
               <TouchableOpacity style={styles.scanButton}
-              onPress={()=>{this.getCameraPermissions("bookID")}} >
+              onPress={()=>{
+                this.getCameraPermissions("bookID")}} >
                 <Text style={styles.buttonText}>SCAN</Text>
               </TouchableOpacity>
             </View>
@@ -139,9 +155,10 @@ export default class TransactionScreen extends React.Component {
               <TextInput style={styles.inputBox}
               placeholder="Student ID" 
               onChangeText={text=>this.setState({scanStudentID:text})}
-              value={this.scanStudentID}></TextInput>
+              value={this.scanStudentID}/>
               <TouchableOpacity style={styles.scanButton}
-              onPress={()=>{this.getCameraPermissions("studentID")}}>
+              onPress={()=>{
+                this.getCameraPermissions("studentID")}}>
                 <Text style={styles.buttonText}>SCAN</Text>
               </TouchableOpacity>
             </View>
@@ -150,24 +167,26 @@ export default class TransactionScreen extends React.Component {
               var transactionStage=this.handleTransaction();
               this.setState({scanBookID:null,scanStudentID:null})
             }}  >
-              <Text style={styles.buttonText}>SUBMIT</Text>
+              <Text style={styles.submitButtonText}>SUBMIT</Text>
             </TouchableOpacity>
-          </View>
-        )
+         
+          </KeyboardAvoidingView>
+        );
       }
-      return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={styles.displayText}>
-          {hasCameraPermissions===true?this.state.scanData:"REQUEST CAMERA PERMISSIONS"}
-          </Text>
-          <TouchableOpacity style={styles.scanButton}
-          onPress={this.getCameraPermissions}>
-            <Text style={styles.buttonText}>SCAN QR CODE</Text>
-          </TouchableOpacity>
-        </View>
-      );
+     // return (
+     //   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+     //   <Text style={styles.displayText}>
+       //   {hasCameraPermissions===true?this.state.scanData:"REQUEST CAMERA PERMISSIONS"}
+        //  </Text>
+       //   <TouchableOpacity style={styles.scanButton}
+       //   onPress={this.getCameraPermissions}>
+        //    <Text style={styles.buttonText}>SCAN QR CODE</Text>
+       //   </TouchableOpacity>
+      //  </View>
+     // );
     }
 }
+
 const styles = StyleSheet.create({
    container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     displayText:{ fontSize: 15, textDecorationLine: 'underline' }, 
